@@ -8,8 +8,26 @@
 //   next(); // next() makes it so the function that contains this function as an argument passes on to the next argument.
 // }
 
-const mongoose = require('mongoose')
-const Store = mongoose.model('Store') // we only need to reference this once b/c mongoose makes use of the singleton (in start.js) where the model is required only once
+const mongoose = require('mongoose');
+const Store = mongoose.model('Store'); // we only need to reference this once b/c mongoose makes use of the singleton (in start.js) where the model is required only once
+const multer = require('multer');
+const jimp = require('jimp');
+const uuid = require('uuid');
+
+const multerOptions = {
+  storage: multer.memoryStorage(),
+  // fileFilter: function(req, file, next) {
+
+  // } // pre-ES6 syntax
+  fileFilter(req, file, next) {
+    const isPhoto = file.mimetype.startsWith('image/');
+    if (isPhoto) {
+      next(null, true); // in Node, the first or only arg. passed into next() is always an error.  Passing 'null' as the 1st arg means there is no error, then the second arg is a non-error arg you want to pass along into the chain of Node functions.
+    } else {
+      next({ message: 'That filetype isn\'t allowed' }, false);
+    }
+  }
+};
 
 exports.homePage = (req, res) => {
   console.log(req.name); // req.name is still 'Paco'
@@ -19,6 +37,20 @@ exports.homePage = (req, res) => {
 exports.addStore = (req, res) => {
   res.render('editStore', { title: 'Add Store' });
 }
+
+exports.upload = multer(multerOptions).single('photo');
+
+exports.resize = async (req, res, next) => {
+  // check if there is no new file to resize
+  if (!req.file) {
+    next(); // skip to next middleware
+    return;
+  } else {
+    console.log(req.file);
+  }
+};
+
+
 
 // exports.createStore = (req, res) => {
 //   const store = new Store(req.body);
@@ -83,12 +115,14 @@ exports.editStore = async (req, res) => {
 // BTW, no harm if you tag a function as async if you're not really sure it needs it.
 
 exports.updateStore = async (req, res) => {
+  // set the location data to be a point.
+  req.body.location.type = 'Point'
   // find and update the store
   const store = await Store.findOneAndUpdate({ _id: req.params.id }, req.body, {
     new: true, // return the new store instead of the old one
     runValidators: true // the validatorss are those options inside storeSchema in Store.js, such as {trim: true} and {required: 'Please enter a store name!'}.  We still want these options active when editing the store, otherwise one could edit out the name of the store.
   }).exec(); // this runs the query
-  req.flash('success', `Successfully updated <strong>${store.name}</strong>. <a href="/stores/${store.slug}">View Store --> </a>`);
+  req.flash('success', `Successfully updated <strong>${store.name}</strong>. <a href="/stores/${store.slug}">View Store here --> </a>`);
   res.redirect(`/stores/${store._id}/edit`);
   // findOneAndUpdate() is a MongoDB function that allows us to query a piece of data from the DB and update it in one fell swoop.
   // redirect user to store and tell her it worked

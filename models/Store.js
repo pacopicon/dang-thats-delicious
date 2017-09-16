@@ -25,12 +25,16 @@ const storeSchema = new mongoose.Schema({
       default: 'Point'
     },
     coordinates: [{
-      Type: Number,
+      type: Number,
       required: 'You must supply coordinates!'
     }],
     address: {
       type: String,
       required: 'You must supply an address!'
+      // both 'required' strings are error messages that are fed 
+      // into the flashes.  Instead of App.js throwing a whole 
+      // stack trace, the flash error handler gives us a simpler
+      // way to announce an error.
     }
   }
 });
